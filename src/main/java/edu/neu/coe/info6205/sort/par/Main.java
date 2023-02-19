@@ -1,10 +1,7 @@
 package edu.neu.coe.info6205.sort.par;
 
-import java.io.BufferedWriter;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStreamWriter;
 import java.util.ArrayList;
+import java.util.TreeMap;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
@@ -18,43 +15,78 @@ public class Main {
 
     public static void main(String[] args) {
         processArgs(args);
-        System.out.println("Degree of parallelism: " + ForkJoinPool.getCommonPoolParallelism());
-        Random random = new Random();
-        int[] array = new int[2000000];
-        ArrayList<Long> timeList = new ArrayList<>();
-        for (int j = 50; j < 100; j++) {
-            ParSort.cutoff = 10000 * (j + 1);
-            // for (int i = 0; i < array.length; i++) array[i] = random.nextInt(10000000);
-            long time;
-            long startTime = System.currentTimeMillis();
-            for (int t = 0; t < 10; t++) {
-                for (int i = 0; i < array.length; i++) array[i] = random.nextInt(10000000);
-                ParSort.sort(array, 0, array.length);
+
+        //Loop for different array sizes
+        for (int i=21; i<=24; i++) {
+            int[] array = new int[(int)Math.pow(2,i)];
+
+            System.out.println("Array size = "+ (int)Math.pow(2,i));
+
+            Random random = new Random();
+            ArrayList<Long> timeList = new ArrayList<>();
+            TreeMap<Integer, ArrayList<Long>> times = new TreeMap<>();
+            for (int j = 1024; j >= 1; j/=2) {
+                ParSort.cutoff = array.length/j;
+                // for (int i = 0; i < array.length; i++) array[i] = random.nextInt(10000000);
+
+                times.put(ParSort.cutoff, new ArrayList<>());
+
+                for(int threads = 2; threads <= 64; threads *= 2){
+
+                    long time;
+                    long startTime = System.currentTimeMillis();
+                    ForkJoinPool forkJoinPool = new ForkJoinPool(threads);
+                    for (int t = 0; t < 10; t++) {
+
+                        for (int k = 0; k < array.length; k++) array[k] = random.nextInt(10000000);
+                        ParSort.sort(array, 0, array.length, forkJoinPool);
+                    }
+                    long endTime = System.currentTimeMillis();
+                    time = (endTime - startTime);
+                    times.get(ParSort.cutoff).add(time/10);
+
+                }
+
+
             }
-            long endTime = System.currentTimeMillis();
-            time = (endTime - startTime);
-            timeList.add(time);
-
-
-            System.out.println("cutoff：" + (ParSort.cutoff) + "\t\t10times Time:" + time + "ms");
-
-        }
-        try {
-            FileOutputStream fis = new FileOutputStream("./src/result.csv");
-            OutputStreamWriter isr = new OutputStreamWriter(fis);
-            BufferedWriter bw = new BufferedWriter(isr);
-            int j = 0;
-            for (long i : timeList) {
-                String content = (double) 10000 * (j + 1) / 2000000 + "," + (double) i / 10 + "\n";
-                j++;
-                bw.write(content);
-                bw.flush();
+            StringBuilder sb = new StringBuilder();
+            for (int j = 1; j <=1028 ; j*=2 ) {
+                if(j==1){
+                    sb.append("Cutoff/Threads,");
+                }
+                else {
+                    sb.append(j + ",");
+                }
             }
-            bw.close();
-
-        } catch (IOException e) {
-            e.printStackTrace();
+            sb.deleteCharAt(sb.length()-1);
+            sb.append("\n");
+            for(Map.Entry<Integer, ArrayList<Long>> entry: times.entrySet()){
+                sb.append(entry.getKey()+",");
+                ArrayList<Long> values = entry.getValue();
+                for (int j = 0; j < values.size(); j++) {
+                    sb.append(values.get(j)+",");
+                }
+                sb.deleteCharAt(sb.length()-1);
+                sb.append("\n");
+            }
+            System.out.println(sb.toString());
         }
+
+//        try {
+//            FileOutputStream fis = new FileOutputStream("./src/result.csv");
+//            OutputStreamWriter isr = new OutputStreamWriter(fis);
+//            BufferedWriter bw = new BufferedWriter(isr);
+//            int j = 0;
+//            for (long i : timeList) {
+//                String content = (double) 10000 * (j + 1) / 2000000 + "," + (double) i / 10 + "\n";
+//                j++;
+//                bw.write(content);
+//                bw.flush();
+//            }
+//            bw.close();
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
     }
 
     private static void processArgs(String[] args) {
@@ -71,10 +103,10 @@ public class Main {
     }
 
     private static void processCommand(String x, String y) {
-        if (x.equalsIgnoreCase("N")) setConfig(x, Integer.parseInt(y));
+        if (x.equalsIgnoreCase("-N")) setConfig(x, Integer.parseInt(y));
         else
             // TODO sort this out
-            if (x.equalsIgnoreCase("P")) //noinspection ResultOfMethodCallIgnored
+            if (x.equalsIgnoreCase("-P")) //noinspection ResultOfMethodCallIgnored
                 ForkJoinPool.getCommonPoolParallelism();
     }
 
