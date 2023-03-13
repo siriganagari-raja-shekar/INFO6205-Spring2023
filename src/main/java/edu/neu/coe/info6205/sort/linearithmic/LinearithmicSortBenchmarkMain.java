@@ -79,7 +79,6 @@ public class LinearithmicSortBenchmarkMain {
             for (int i = 10000; i <= 2560000; i*=2) {
                 new LinearithmicSortBenchmarkMain(i, 100, Config.load()).runBenchMarks();
             }
-//            new LinearithmicSortBenchmarkMain(10000, 100, Config.load()).runBenchMarks();
         }
         catch (Exception e){
             e.printStackTrace();
